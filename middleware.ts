@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { isPreviewBypassAllowed, PREVIEW_COOKIE } from '@/lib/coming-soon-gate';
+import {
+	canActivatePreviewBypass,
+	getPreviewBypassKeyFromPath,
+	PREVIEW_COOKIE,
+	PREVIEW_EXIT_PATH,
+} from '@/lib/coming-soon-gate';
 import { site } from '@/lib/site';
 
 function withPreviewCookie(response: NextResponse, enabled: boolean): NextResponse {
@@ -10,6 +15,7 @@ function withPreviewCookie(response: NextResponse, enabled: boolean): NextRespon
 			httpOnly: true,
 			sameSite: 'lax',
 			maxAge: 60 * 60 * 24 * 7,
+			secure: process.env.NODE_ENV === 'production',
 		});
 	} else {
 		response.cookies.delete(PREVIEW_COOKIE);
@@ -21,35 +27,43 @@ function hasPreviewCookie(request: NextRequest): boolean {
 	return request.cookies.get(PREVIEW_COOKIE)?.value === '1';
 }
 
+function handlePreviewBypass(request: NextRequest): NextResponse | null {
+	const { pathname } = request.nextUrl;
+
+	if (pathname === PREVIEW_EXIT_PATH) {
+		return withPreviewCookie(NextResponse.redirect(new URL('/', request.url)), false);
+	}
+
+	const pathKey = getPreviewBypassKeyFromPath(pathname);
+	if (pathKey && canActivatePreviewBypass(pathKey)) {
+		return withPreviewCookie(NextResponse.redirect(new URL('/', request.url)), true);
+	}
+
+	if (pathname.startsWith('/preview/')) {
+		return NextResponse.redirect(new URL('/coming-soon', request.url));
+	}
+
+	if (hasPreviewCookie(request)) {
+		return NextResponse.next();
+	}
+
+	return null;
+}
+
 export function middleware(request: NextRequest) {
 	if (!site.comingSoonGateEnabled) {
 		return NextResponse.next();
 	}
 
-	const { pathname, searchParams } = request.nextUrl;
+	const { pathname } = request.nextUrl;
 
 	if (pathname === '/coming-soon') {
 		return NextResponse.next();
 	}
 
-	if (isPreviewBypassAllowed()) {
-		const preview = searchParams.get('preview');
-
-		if (preview === '1') {
-			const url = request.nextUrl.clone();
-			url.searchParams.delete('preview');
-			return withPreviewCookie(NextResponse.redirect(url), true);
-		}
-
-		if (preview === '0') {
-			const url = request.nextUrl.clone();
-			url.searchParams.delete('preview');
-			return withPreviewCookie(NextResponse.redirect(url), false);
-		}
-
-		if (hasPreviewCookie(request)) {
-			return NextResponse.next();
-		}
+	const previewResponse = handlePreviewBypass(request);
+	if (previewResponse) {
+		return previewResponse;
 	}
 
 	return NextResponse.redirect(new URL('/coming-soon', request.url));

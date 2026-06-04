@@ -22,18 +22,11 @@ npm run dev
 
 Open [http://localhost:3010](http://localhost:3010) (port **3010** avoids conflicting with other local Next.js sites on 3000).
 
-### Preview coming soon and full site (dev only)
+### Early access (while coming soon is enabled)
 
-With `comingSoonGateEnabled: true`, use two Cursor browser tabs:
+With `comingSoonGateEnabled: true`, the public sees `/coming-soon`. Share the bypass URL from `lib/site.ts` (`previewBypassUrl`) with early readers — one visit sets a **7-day cookie**.
 
-| Tab | URL |
-|-----|-----|
-| Coming soon | [http://localhost:3010/coming-soon](http://localhost:3010/coming-soon) |
-| Full site (landing, chapters, etc.) | [http://localhost:3010/?preview=1](http://localhost:3010/?preview=1) once — sets a cookie for 7 days |
-
-To exit preview mode: [http://localhost:3010/?preview=0](http://localhost:3010/?preview=0)
-
-Preview bypass only works when `NODE_ENV=development` (not in production).
+To rotate or revoke the link, change `previewBypassKey` in `lib/site.ts` and redeploy. Exit preview: `/preview/exit`.
 
 ### Test downloads without Stripe
 
