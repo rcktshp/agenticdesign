@@ -4,7 +4,7 @@ import { site } from '@/lib/site';
 
 export const metadata: Metadata = {
 	title: `Coming soon — ${site.title}`,
-	description: `${site.title} launches ${site.launchDateLabel}.`,
+	description: site.tagline,
 };
 
 export default function ComingSoonPage() {
@@ -16,9 +16,6 @@ export default function ComingSoonPage() {
 					<cite>{site.title}</cite>
 				</h1>
 				<p className={styles.kicker}>{site.kicker}</p>
-				<p className={styles.date}>
-					Launching <time dateTime={site.launchDateIso}>{site.launchDateLabel}</time>
-				</p>
 				<p className={styles.lead}>{site.tagline}</p>
 			</div>
 		</main>

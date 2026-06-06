@@ -57,17 +57,6 @@
 	color: #9aa0a6;
 }
 
-.date {
-	margin: 0 0 1rem;
-	font-family: var(--font-display);
-	font-size: clamp(1.35rem, 4vw, 1.75rem);
-	color: #e8eaed;
-}
-
-.date time {
-	color: #f0b429;
-}
-
 .lead {
 	margin: 0;
 	width: 100%;
