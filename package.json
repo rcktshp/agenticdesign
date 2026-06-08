@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "WATCHPACK_POLLING=true next dev -H localhost -p 3010",
+    "dev:clean": "rm -rf .next && WATCHPACK_POLLING=true next dev -H localhost -p 3010",
     "build": "next build",
     "start": "next start",
     "import-chapters": "node scripts/import-chapters.mjs"

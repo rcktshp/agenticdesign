@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { ChevronIcon } from '@/components/icons';
 import {
 	clearReaderNavIntent,
 	peekReaderNavIntent,
@@ -31,6 +32,14 @@ function isAtScrollBottom(): boolean {
 export default function ReaderScroll({ chapterKey, prevHref, nextHref, children }: Props) {
 	const router = useRouter();
 	const readyRef = useRef(false);
+
+	const goToChapter = useCallback(
+		(href: string, intent: 'start' | 'last') => {
+			setReaderNavIntent(intent);
+			router.push(href);
+		},
+		[router],
+	);
 
 	useLayoutEffect(() => {
 		readyRef.current = false;
@@ -100,5 +109,41 @@ export default function ReaderScroll({ chapterKey, prevHref, nextHref, children 
 		return () => window.removeEventListener('keydown', onKeyDown);
 	}, [nextHref, prevHref, router]);
 
-	return <div className="reader-scroll">{children}</div>;
+	const showNav = Boolean(prevHref || nextHref);
+
+	return (
+		<div className="reader-scroll">
+			{children}
+			{showNav ? (
+				<nav className="reader-scroll-nav" aria-label="Chapter">
+					{prevHref ? (
+						<button
+							type="button"
+							className="reader-scroll-nav__link reader-scroll-nav__link--prev"
+							aria-label="Previous chapter"
+							onClick={() => goToChapter(prevHref, 'last')}
+						>
+							<ChevronIcon direction="left" size="sm" />
+							<span>Previous</span>
+						</button>
+					) : (
+						<span className="reader-scroll-nav__spacer" aria-hidden="true" />
+					)}
+					{nextHref ? (
+						<button
+							type="button"
+							className="reader-scroll-nav__link reader-scroll-nav__link--next"
+							aria-label="Next chapter"
+							onClick={() => goToChapter(nextHref, 'start')}
+						>
+							<span>Next</span>
+							<ChevronIcon direction="right" size="sm" />
+						</button>
+					) : (
+						<span className="reader-scroll-nav__spacer" aria-hidden="true" />
+					)}
+				</nav>
+			) : null}
+		</div>
+	);
 }

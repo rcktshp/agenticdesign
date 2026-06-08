@@ -55,11 +55,11 @@ export const defaultReaderPreferences: ReaderPreferences = {
 	theme: 'original',
 	appearance: 'light',
 	fontSize: FONT_SIZE_DEFAULT,
-	layoutMode: 'pages',
+	layoutMode: 'scroll',
 };
 
 function normalizeLayoutMode(value: unknown): ReaderLayoutMode {
-	return value === 'scroll' ? 'scroll' : 'pages';
+	return value === 'pages' ? 'pages' : 'scroll';
 }
 
 export function clampFontSize(value: number): number {

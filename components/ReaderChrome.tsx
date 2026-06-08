@@ -35,9 +35,10 @@ import {
 	type ReaderPreferences,
 	type ReaderTheme,
 } from '@/lib/reader-preferences';
+import { searchBook, type BookSearchChapter, type BookSearchResult } from '@/lib/book-search';
+import { setSearchHighlight } from '@/lib/reader-search-highlight';
 import { site } from '@/lib/site';
 import {
-	AppearanceIcon,
 	BookmarkIcon,
 	BookmarkMenuIcon,
 	CheckIcon,
@@ -52,7 +53,6 @@ import {
 	SearchIcon,
 	SystemModeIcon,
 	TextSizeIcon,
-	ThemeSampleIcon,
 } from '@/components/icons';
 
 export type ReaderChapter = {
@@ -68,8 +68,27 @@ type Panel = 'contents' | 'bookmarks' | 'highlights' | 'settings' | 'search' | n
 
 type Props = {
 	chapters: ReaderChapter[];
+	searchIndex: BookSearchChapter[];
 	children: ReactNode;
 };
+
+function highlightSnippet(snippet: string, query: string): ReactNode {
+	const normalizedQuery = query.trim();
+	if (!normalizedQuery) return snippet;
+
+	const lowerSnippet = snippet.toLowerCase();
+	const lowerQuery = normalizedQuery.toLowerCase();
+	const index = lowerSnippet.indexOf(lowerQuery);
+	if (index === -1) return snippet;
+
+	return (
+		<>
+			{snippet.slice(0, index)}
+			<mark className="reader-search-results__mark">{snippet.slice(index, index + normalizedQuery.length)}</mark>
+			{snippet.slice(index + normalizedQuery.length)}
+		</>
+	);
+}
 
 function getCurrentSlug(pathname: string): string | null {
 	if (pathname === '/cover') return 'cover';
@@ -86,7 +105,7 @@ function isContentsActive(
 	return chapter.slug === currentSlug;
 }
 
-export default function ReaderChrome({ chapters, children }: Props) {
+export default function ReaderChrome({ chapters, searchIndex, children }: Props) {
 	const pathname = usePathname();
 	const currentSlug = getCurrentSlug(pathname);
 	const shellRef = useRef<HTMLDivElement>(null);
@@ -95,7 +114,6 @@ export default function ReaderChrome({ chapters, children }: Props) {
 	const [bookmarks, setBookmarks] = useState<ReaderBookmark[]>([]);
 	const [highlights, setHighlights] = useState<ReaderHighlight[]>([]);
 	const [panel, setPanel] = useState<Panel>(null);
-	const [appearanceMenuOpen, setAppearanceMenuOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [ready, setReady] = useState(false);
 
@@ -131,7 +149,6 @@ export default function ReaderChrome({ chapters, children }: Props) {
 
 	useEffect(() => {
 		setPanel(null);
-		setAppearanceMenuOpen(false);
 		setSearchQuery('');
 	}, [pathname]);
 
@@ -142,27 +159,15 @@ export default function ReaderChrome({ chapters, children }: Props) {
 	}, [refreshAnnotations]);
 
 	useEffect(() => {
-		if (!appearanceMenuOpen) return;
-
-		const onPointerDown = (event: MouseEvent) => {
-			if (!(event.target as HTMLElement).closest('.reader-settings__appearance')) {
-				setAppearanceMenuOpen(false);
-			}
-		};
-
-		document.addEventListener('mousedown', onPointerDown);
-		return () => document.removeEventListener('mousedown', onPointerDown);
-	}, [appearanceMenuOpen]);
-
-	useEffect(() => {
-		if (panel !== 'settings') setAppearanceMenuOpen(false);
-	}, [panel]);
-
-	useEffect(() => {
 		if (!panel) return;
 
 		const onPointerDown = (event: MouseEvent) => {
-			if (!shellRef.current?.contains(event.target as Node)) {
+			const target = event.target;
+			if (!(target instanceof Node)) return;
+			if (target instanceof Element && target.closest('.reader-chrome__pill-button, .reader-chrome__button')) {
+				return;
+			}
+			if (!shellRef.current?.contains(target)) {
 				setPanel(null);
 			}
 		};
@@ -184,23 +189,32 @@ export default function ReaderChrome({ chapters, children }: Props) {
 		[chapters],
 	);
 
-	const filteredChapters = useMemo(() => {
-		const query = searchQuery.trim().toLowerCase();
-		if (!query) return chapters;
-		return chapters.filter(
-			(chapter) =>
-				chapter.title.toLowerCase().includes(query) ||
-				chapter.label.toLowerCase().includes(query),
-		);
-	}, [chapters, searchQuery]);
+	const searchResults = useMemo(
+		() => searchBook(searchIndex, searchQuery),
+		[searchIndex, searchQuery],
+	);
+
+	const onSearchResultClick = useCallback(
+		(result: BookSearchResult) => {
+			setSearchHighlight(result.matchText);
+			setPanel(null);
+			if (currentSlug === result.slug) {
+				window.dispatchEvent(new CustomEvent('reader-search-highlight'));
+			}
+		},
+		[currentSlug],
+	);
 
 	const setTheme = useCallback((theme: ReaderTheme) => {
-		setPrefs((current) => ({ ...current, theme }));
+		setPrefs((current) => ({
+			...current,
+			theme,
+			appearance: theme === 'quiet' ? 'dark' : current.appearance,
+		}));
 	}, []);
 
 	const setAppearance = useCallback((appearance: ReaderAppearance) => {
 		setPrefs((current) => ({ ...current, appearance }));
-		setAppearanceMenuOpen(false);
 	}, []);
 
 	const setLayoutMode = useCallback((layoutMode: ReaderLayoutMode) => {
@@ -502,23 +516,32 @@ export default function ReaderChrome({ chapters, children }: Props) {
 							autoFocus
 						/>
 					</label>
-					<ul className="reader-contents">
-						{filteredChapters.map((chapter) => (
-							<li key={chapter.slug}>
-								<Link
-									href={chapter.href}
-									className="reader-contents__link"
-									onClick={() => setPanel(null)}
-								>
-									<span className="reader-contents__label">{chapter.label}</span>
-									<span className="reader-contents__page">{chapter.startPage}</span>
-								</Link>
-							</li>
-						))}
-						{filteredChapters.length === 0 && (
-							<li className="reader-panel__empty">No chapters match your search.</li>
-						)}
-					</ul>
+					{searchQuery.trim().length < 2 ? (
+						<p className="reader-panel__empty">Type at least 2 characters to search the book.</p>
+					) : (
+						<ul className="reader-search-results">
+							{searchResults.map((result, index) => (
+								<li key={`${result.slug}-${index}`}>
+									<Link
+										href={result.href}
+										className="reader-search-results__link"
+										onClick={() => onSearchResultClick(result)}
+									>
+										<span className="reader-search-results__meta">
+											<span className="reader-search-results__chapter">{result.label}</span>
+											<span className="reader-search-results__page">{result.startPage}</span>
+										</span>
+										<span className="reader-search-results__snippet">
+											{highlightSnippet(result.snippet, searchQuery)}
+										</span>
+									</Link>
+								</li>
+							))}
+							{searchResults.length === 0 && (
+								<li className="reader-panel__empty">No results found in this book.</li>
+							)}
+						</ul>
+					)}
 				</div>
 			)}
 
@@ -526,82 +549,109 @@ export default function ReaderChrome({ chapters, children }: Props) {
 				<div className="reader-panel reader-panel--settings" role="dialog" aria-label="Themes and settings">
 					<p className="reader-panel__title">Themes &amp; Settings</p>
 
-					<div className="reader-settings__row">
-						<div className="reader-settings__size">
-							<button
-								type="button"
-								className="reader-settings__size-button"
-								onClick={decreaseFontSize}
-								disabled={atMin}
-								aria-label="Decrease text size"
-							>
-								<TextSizeIcon variant="decrease" />
-							</button>
-							<button
-								type="button"
-								className="reader-settings__size-button"
-								onClick={increaseFontSize}
-								disabled={atMax}
-								aria-label="Increase text size"
-							>
-								<TextSizeIcon variant="increase" />
-							</button>
-						</div>
-						<div className="reader-settings__appearance">
-							<button
-								type="button"
-								className="reader-settings__appearance-trigger"
-								aria-label="Appearance"
-								aria-expanded={appearanceMenuOpen}
-								aria-haspopup="menu"
-								data-active={appearanceMenuOpen ? 'true' : undefined}
-								onClick={() => setAppearanceMenuOpen((open) => !open)}
-							>
-								<AppearanceIcon />
-							</button>
-							{appearanceMenuOpen && (
-								<div className="reader-appearance-menu" role="menu" aria-label="Appearance">
-									{READER_APPEARANCE_OPTIONS.map((option) => (
-										<button
-											key={option.id}
-											type="button"
-											className="reader-appearance-menu__option"
-											role="menuitemradio"
-											aria-checked={prefs.appearance === option.id}
-											data-active={prefs.appearance === option.id ? 'true' : undefined}
-											onClick={() => setAppearance(option.id)}
-										>
-											<span className="reader-appearance-menu__icon" aria-hidden="true">
-												{option.id === 'light' && <LightModeIcon />}
-												{option.id === 'dark' && <DarkModeIcon />}
-												{option.id === 'system' && <SystemModeIcon />}
-											</span>
-											<span>{option.label}</span>
-											{prefs.appearance === option.id && (
-												<CheckIcon className="reader-appearance-menu__check" />
-											)}
-										</button>
-									))}
-								</div>
-							)}
-						</div>
-					</div>
+					<div className="reader-settings">
+						<section className="reader-settings__section">
+							<h3 className="reader-settings__heading">Text size</h3>
+							<div className="reader-settings__size">
+								<button
+									type="button"
+									className="reader-settings__size-button reader-settings__size-button--decrease"
+									onClick={decreaseFontSize}
+									disabled={atMin}
+									aria-label="Decrease text size"
+								>
+									<span className="reader-settings__size-label" aria-hidden="true">
+										a
+									</span>
+								</button>
+								<button
+									type="button"
+									className="reader-settings__size-button reader-settings__size-button--increase"
+									onClick={increaseFontSize}
+									disabled={atMax}
+									aria-label="Increase text size"
+								>
+									<span className="reader-settings__size-label" aria-hidden="true">
+										A
+									</span>
+								</button>
+							</div>
+						</section>
 
-					<div className="reader-themes">
-						{READER_THEME_OPTIONS.map((theme) => (
-							<button
-								key={theme.id}
-								type="button"
-								className="reader-theme"
-								data-theme={theme.id}
-								data-active={prefs.theme === theme.id ? 'true' : undefined}
-								onClick={() => setTheme(theme.id)}
-								aria-pressed={prefs.theme === theme.id}
-							>
-								<ThemeSampleIcon className="reader-theme__sample" />
-								<span className="reader-theme__label">{theme.label}</span>
-							</button>
-						))}
+						<section className="reader-settings__section">
+							<h3 className="reader-settings__heading">Appearance</h3>
+							<div className="reader-settings__segmented" role="group" aria-label="Appearance">
+								{READER_APPEARANCE_OPTIONS.map((option) => (
+									<button
+										key={option.id}
+										type="button"
+										className="reader-settings__segmented-button"
+										aria-pressed={prefs.appearance === option.id}
+										data-active={prefs.appearance === option.id ? 'true' : undefined}
+										onClick={() => setAppearance(option.id)}
+									>
+										<span className="reader-settings__segmented-icon" aria-hidden="true">
+											{option.id === 'light' && <LightModeIcon size="sm" />}
+											{option.id === 'dark' && <DarkModeIcon size="sm" />}
+											{option.id === 'system' && <SystemModeIcon size="sm" />}
+										</span>
+										<span>{option.label}</span>
+									</button>
+								))}
+							</div>
+						</section>
+
+						<section className="reader-settings__section">
+							<h3 className="reader-settings__heading">Layout</h3>
+							<div className="reader-settings__segmented" role="group" aria-label="Reading layout">
+								<button
+									type="button"
+									className="reader-settings__segmented-button"
+									data-active={prefs.layoutMode === 'scroll' ? 'true' : undefined}
+									aria-pressed={prefs.layoutMode === 'scroll'}
+									onClick={() => setLayoutMode('scroll')}
+								>
+									<ScrollIcon size="sm" />
+									Scroll
+								</button>
+								<button
+									type="button"
+									className="reader-settings__segmented-button"
+									data-active={prefs.layoutMode === 'pages' ? 'true' : undefined}
+									aria-pressed={prefs.layoutMode === 'pages'}
+									onClick={() => setLayoutMode('pages')}
+								>
+									<PagesIcon size="sm" />
+									Pages
+								</button>
+							</div>
+						</section>
+
+						<section className="reader-settings__section">
+							<h3 className="reader-settings__heading">Theme</h3>
+							<div className="reader-themes">
+								{READER_THEME_OPTIONS.map((theme) => (
+									<button
+										key={theme.id}
+										type="button"
+										className="reader-theme"
+										data-theme={theme.id}
+										data-active={prefs.theme === theme.id ? 'true' : undefined}
+										onClick={() => setTheme(theme.id)}
+										aria-pressed={prefs.theme === theme.id}
+										aria-label={`${theme.label} theme`}
+									>
+										<span className="reader-theme__sample" aria-hidden="true">
+											Aa
+										</span>
+										<span className="reader-theme__label">{theme.label}</span>
+										{prefs.theme === theme.id && (
+											<CheckIcon className="reader-theme__check" aria-hidden="true" />
+										)}
+									</button>
+								))}
+							</div>
+						</section>
 					</div>
 				</div>
 			)}

@@ -14,6 +14,11 @@ import {
 	loadHighlights,
 	type HighlightColor,
 } from '@/lib/reader-annotations';
+import {
+	clearSearchHighlight,
+	peekSearchHighlight,
+	READER_SEARCH_HIGHLIGHT_EVENT,
+} from '@/lib/reader-search-highlight';
 import { NoteIcon } from '@/components/icons';
 
 type Props = {
@@ -56,6 +61,35 @@ function wrapTextInContainer(
 	return false;
 }
 
+function applySearchHighlight(container: HTMLElement): boolean {
+	const searchText = peekSearchHighlight();
+	if (!searchText) return false;
+
+	clearSearchHighlight();
+
+	const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+	let node: Text | null = walker.nextNode() as Text | null;
+
+	while (node) {
+		const content = node.textContent ?? '';
+		const index = content.toLowerCase().indexOf(searchText.toLowerCase());
+		if (index >= 0) {
+			const mark = document.createElement('mark');
+			mark.className = 'reader-search-hit';
+
+			const range = document.createRange();
+			range.setStart(node, index);
+			range.setEnd(node, index + searchText.length);
+			range.surroundContents(mark);
+			mark.scrollIntoView({ block: 'center', behavior: 'auto' });
+			return true;
+		}
+		node = walker.nextNode() as Text | null;
+	}
+
+	return false;
+}
+
 function applyHighlights(container: HTMLElement, slug: string): void {
 	container.querySelectorAll('mark.reader-highlight').forEach((mark) => {
 		const parent = mark.parentNode;
@@ -88,15 +122,33 @@ export default function ReaderProse({ slug, children }: Props) {
 		applyHighlights(rootRef.current, slug);
 	}, [slug]);
 
+	const refreshSearchHighlight = useCallback(() => {
+		if (!rootRef.current) return;
+		rootRef.current.querySelectorAll('mark.reader-search-hit').forEach((mark) => {
+			const parent = mark.parentNode;
+			if (!parent) return;
+			parent.replaceChild(document.createTextNode(mark.textContent ?? ''), mark);
+			parent.normalize();
+		});
+		applySearchHighlight(rootRef.current);
+	}, []);
+
 	useEffect(() => {
 		refreshHighlights();
-	}, [refreshHighlights]);
+		refreshSearchHighlight();
+	}, [refreshHighlights, refreshSearchHighlight]);
 
 	useEffect(() => {
 		const onChange = () => refreshHighlights();
 		window.addEventListener('reader-annotations-change', onChange);
 		return () => window.removeEventListener('reader-annotations-change', onChange);
 	}, [refreshHighlights]);
+
+	useEffect(() => {
+		const onSearchHighlight = () => refreshSearchHighlight();
+		window.addEventListener(READER_SEARCH_HIGHLIGHT_EVENT, onSearchHighlight);
+		return () => window.removeEventListener(READER_SEARCH_HIGHLIGHT_EVENT, onSearchHighlight);
+	}, [refreshSearchHighlight]);
 
 	useEffect(() => {
 		if (!menu) return;
