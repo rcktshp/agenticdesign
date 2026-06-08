@@ -8,14 +8,5 @@ export const site = {
 	description:
 		'Agentic Design Systems (ADS) is a methodology for building design systems that are AI-native by design, AI-powered in practice, and AI-ready at every level. It is built on a single core insight: the component library was never really the product—the manifest is.',
 	readOnlineNote: 'Read the full book online for free.',
-	/** When true, middleware sends all traffic to /coming-soon. Set false after launch. */
-	comingSoonGateEnabled: true,
 	productionUrl: 'https://agenticdesign.diegomartins.com',
-	/** Share /preview/{this} with early readers (7-day cookie). Change to rotate access. */
-	previewBypassKey: '82829db02b7afcd8efa2ecdd',
-	launchDateIso: '2026-06-05',
-	launchDateLabel: 'June 5, 2026',
 } as const;
-
-export const previewBypassUrl = `${site.productionUrl}/preview/${site.previewBypassKey}`;
-export const previewExitUrl = `${site.productionUrl}/preview/exit`;
