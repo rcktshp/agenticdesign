@@ -13,7 +13,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
 					<a href={site.authorUrl} {...linkProps(site.authorUrl)}>
 						{site.author}
 					</a>
-					. Read free online; donate to download.
+					. Read free online.
 				</p>
 			</footer>
 		</>

@@ -12,6 +12,11 @@ const components: Components = {
 			</a>
 		);
 	},
+	table: ({ children, ...props }) => (
+		<div className="table-scroll">
+			<table {...props}>{children}</table>
+		</div>
+	),
 };
 
 type Props = { content: string };

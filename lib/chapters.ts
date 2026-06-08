@@ -61,6 +61,14 @@ export function getSectionLabel(chapter: Chapter): string {
 	return num ? `Chapter ${num}` : chapter.title;
 }
 
+/** A Book Apart–style running section label (e.g. Introduction, Chapter 1). */
+export function getSectionRunningLabel(chapter: Chapter): string {
+	if (chapter.order === 1) return 'Introduction';
+	if (isGlossary(chapter)) return 'Glossary';
+	const num = getChapterNumber(chapter);
+	return num ? `Chapter ${num}` : chapter.title;
+}
+
 export function formatChapterNavLabel(chapter: Chapter): string {
 	if (chapter.order === 1) return 'Foreword';
 	if (isGlossary(chapter)) return 'Glossary';

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ListIcon } from '@/components/icons';
 import { site } from '@/lib/site';
 
 export default function HomePage() {
@@ -6,24 +7,21 @@ export default function HomePage() {
 		<main className="hero">
 			<img
 				className="hero__cover"
-				src="/images/book-cover.svg"
+				src="/images/book-cover.png"
 				alt={`${site.title} book cover`}
-				width={320}
-				height={440}
+				width={723}
+				height={1024}
 			/>
 			<div>
 				<h1>
 					<cite>{site.title}</cite>
 				</h1>
-				<p className="hero__kicker">{site.kicker}</p>
 				<p className="hero__lead">{site.tagline}</p>
 				<p>{site.description}</p>
 				<p>{site.readOnlineNote}</p>
 				<div className="btn-group">
-					<Link className="btn" href="/download">
-						Order ebook
-					</Link>
-					<Link className="btn btn--ghost" href="/table-of-contents">
+					<Link className="btn" href="/cover">
+						<ListIcon size="sm" />
 						Read now
 					</Link>
 				</div>

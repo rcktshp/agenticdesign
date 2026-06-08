@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import ChapterNav from '@/components/ChapterNav';
 import MarkdownContent from '@/components/MarkdownContent';
+import ReaderProse from '@/components/ReaderProse';
+import ReaderExperience from '@/components/ReaderExperience';
 import {
-	formatChapterNavLabel,
 	getChapterBySlug,
 	getOrderedChapters,
-	getSectionLabel,
+	getSectionRunningLabel,
 } from '@/lib/chapters';
+import { getPageMetaForChapter } from '@/lib/book-pagination';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -32,36 +32,38 @@ export default async function ChapterPage({ params }: Props) {
 	if (!chapter) notFound();
 
 	const chapters = getOrderedChapters();
-	const navChapters = chapters.map((c) => ({ slug: c.slug, title: c.title }));
-	const sectionLabel = getSectionLabel(chapter);
+	const chapterIndex = chapters.findIndex((c) => c.slug === slug);
+	const prevChapter = chapterIndex > 0 ? chapters[chapterIndex - 1] : null;
+	const nextChapter =
+		chapterIndex >= 0 && chapterIndex < chapters.length - 1
+			? chapters[chapterIndex + 1]
+			: null;
+	const sectionLabel = getSectionRunningLabel(chapter);
+	const pageMeta = getPageMetaForChapter(chapter);
 
 	return (
-		<article className="chapter-layout">
-			<aside className="chapter-sidebar">
-				<h2>Contents</h2>
-				<ul className="chapter-sidebar__list">
-					{chapters.map((c) => (
-						<li key={c.slug}>
-							<Link
-								href={`/chapters/${c.slug}`}
-								aria-current={c.slug === slug ? 'page' : undefined}
-							>
-								{formatChapterNavLabel(c)}
-							</Link>
-						</li>
-					))}
-				</ul>
-			</aside>
-			<div>
-				<header>
-					<p className="message-muted">{sectionLabel}</p>
-					{chapter.order !== 1 && <h1>{chapter.title}</h1>}
+		<article className="chapter-layout reader-page">
+			<ReaderExperience
+				key={slug}
+				chapterKey={slug}
+				chapterLabel={sectionLabel}
+				startPage={pageMeta.startPage}
+				prevHref={
+					chapterIndex === 0 ? '/cover' : prevChapter ? `/chapters/${prevChapter.slug}` : undefined
+				}
+				nextHref={nextChapter ? `/chapters/${nextChapter.slug}` : undefined}
+			>
+				<header className="chapter-header">
+					<p className="chapter-section-label">{sectionLabel}</p>
+					<h1 className="chapter-header__title">{chapter.title}</h1>
 				</header>
-				<div className="chapter-prose">
-					<MarkdownContent content={chapter.content} />
+
+				<div className="chapter-prose reader-prose">
+					<ReaderProse slug={slug}>
+						<MarkdownContent content={chapter.content} />
+					</ReaderProse>
 				</div>
-				<ChapterNav chapters={navChapters} currentSlug={slug} />
-			</div>
+			</ReaderExperience>
 		</article>
 	);
 }

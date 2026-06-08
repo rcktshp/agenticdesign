@@ -8,6 +8,19 @@ import {
 } from '@/lib/coming-soon-gate';
 import { site } from '@/lib/site';
 
+function buildRedirectUrl(request: NextRequest, pathname: string): URL {
+	const url = request.nextUrl.clone();
+	url.pathname = pathname;
+	url.search = '';
+
+	const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+	if (host) {
+		url.host = host;
+	}
+
+	return url;
+}
+
 function withPreviewCookie(response: NextResponse, enabled: boolean): NextResponse {
 	if (enabled) {
 		response.cookies.set(PREVIEW_COOKIE, '1', {
@@ -31,16 +44,22 @@ function handlePreviewBypass(request: NextRequest): NextResponse | null {
 	const { pathname } = request.nextUrl;
 
 	if (pathname === PREVIEW_EXIT_PATH) {
-		return withPreviewCookie(NextResponse.redirect(new URL('/', request.url)), false);
+		return withPreviewCookie(
+			NextResponse.redirect(buildRedirectUrl(request, '/')),
+			false,
+		);
 	}
 
 	const pathKey = getPreviewBypassKeyFromPath(pathname);
 	if (pathKey && canActivatePreviewBypass(pathKey)) {
-		return withPreviewCookie(NextResponse.redirect(new URL('/', request.url)), true);
+		return withPreviewCookie(
+			NextResponse.redirect(buildRedirectUrl(request, '/')),
+			true,
+		);
 	}
 
 	if (pathname.startsWith('/preview/')) {
-		return NextResponse.redirect(new URL('/coming-soon', request.url));
+		return NextResponse.redirect(buildRedirectUrl(request, '/coming-soon'));
 	}
 
 	if (hasPreviewCookie(request)) {
@@ -51,7 +70,7 @@ function handlePreviewBypass(request: NextRequest): NextResponse | null {
 }
 
 export function middleware(request: NextRequest) {
-	if (!site.comingSoonGateEnabled) {
+	if (!site.comingSoonGateEnabled || process.env.NODE_ENV === 'development') {
 		return NextResponse.next();
 	}
 
@@ -66,7 +85,7 @@ export function middleware(request: NextRequest) {
 		return previewResponse;
 	}
 
-	return NextResponse.redirect(new URL('/coming-soon', request.url));
+	return NextResponse.redirect(buildRedirectUrl(request, '/coming-soon'));
 }
 
 export const config = {

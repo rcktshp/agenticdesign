@@ -2,17 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { HomeIcon, ListIcon } from '@/components/icons';
 import { site } from '@/lib/site';
 
 const nav = [
-	{ href: '/', label: 'Home', match: (p: string) => p === '/' },
+	{ href: '/', label: 'Home', icon: HomeIcon, match: (p: string) => p === '/' },
 	{
 		href: '/table-of-contents',
 		label: 'Read',
+		icon: ListIcon,
 		match: (p: string) => p.startsWith('/table-of-contents') || p.startsWith('/chapters'),
 	},
-	{ href: '/download', label: 'Download', match: (p: string) => p.startsWith('/download') },
-];
+] as const;
 
 export default function SiteHeader() {
 	const path = usePathname();
@@ -24,15 +25,19 @@ export default function SiteHeader() {
 					{site.title}
 				</Link>
 				<nav className="site-nav" aria-label="Primary">
-					{nav.map((item) => (
+					{nav.map((item) => {
+						const Icon = item.icon;
+						return (
 						<Link
 							key={item.href}
 							href={item.href}
 							aria-current={item.match(path) ? 'page' : undefined}
 						>
+							<Icon size="sm" />
 							{item.label}
 						</Link>
-					))}
+						);
+					})}
 				</nav>
 			</div>
 		</header>

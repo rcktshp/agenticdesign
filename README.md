@@ -1,15 +1,13 @@
 # Agentic Design — ebook site
 
-A web-first ebook inspired by [Atomic Design](https://atomicdesign.bradfrost.com): read every chapter online for free, and unlock **PDF** and **EPUB** after a minimum donation via Stripe.
+A web-first ebook inspired by [Atomic Design](https://atomicdesign.bradfrost.com): read every chapter online for free.
 
 Built with **Next.js** (App Router).
 
 ## Features
 
-- **Landing page** with cover, synopsis, and “Read now” / “Order ebook” actions
-- **Table of contents** and **chapter reader** with sidebar navigation
-- **Donation gate** — Stripe Checkout with preset or custom amounts (minimum configurable)
-- **Protected downloads** — files live in `private/downloads/`, not `public/`
+- **Landing page** with cover, synopsis, and “Read now” action
+- **Table of contents** and **chapter reader**
 - **External links** in chapter Markdown open in a new tab
 
 ## Quick start
@@ -28,33 +26,13 @@ With `comingSoonGateEnabled: true`, the public sees `/coming-soon`. Share the by
 
 To rotate or revoke the link, change `previewBypassKey` in `lib/site.ts` and redeploy. Exit preview: `/preview/exit`.
 
-### Test downloads without Stripe
-
-In `.env`:
-
-```
-DEV_SKIP_DONATION=true
-```
-
-Then visit [http://localhost:3010/download/success?session_id=dev_bypass](http://localhost:3010/download/success?session_id=dev_bypass) (after placing PDF/EPUB files in `private/downloads/`).
-
-## Stripe setup
-
-1. Create a [Stripe](https://stripe.com) account and get **Secret key** (test mode is fine).
-2. Set in `.env`:
-   - `STRIPE_SECRET_KEY`
-   - `NEXT_PUBLIC_SITE_URL` (your production URL, e.g. `https://agenticdesign.example.com`)
-3. Deploy with HTTPS. Stripe redirect URLs use `NEXT_PUBLIC_SITE_URL`.
-4. Optional: add a webhook later for auditing; the app verifies `session_id` on each download.
-
 ## Add your book
 
 | Task | Location |
 |------|----------|
-| Edit title, author, minimum donation | `lib/site.ts` |
+| Edit title, author, site copy | `lib/site.ts` |
 | Chapters (Markdown) | `content/chapters/` |
 | Import from Google Drive source | `npm run import-chapters` (see `scripts/import-chapters.mjs`) |
-| PDF / EPUB files | `private/downloads/agentic-design.pdf`, `agentic-design.epub` |
 | Cover art | `public/images/book-cover.svg` |
 
 ## Build & deploy

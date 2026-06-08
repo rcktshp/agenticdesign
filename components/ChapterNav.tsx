@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronIcon } from '@/components/icons';
 
 type ChapterLink = { slug: string; title: string };
 
@@ -15,14 +16,34 @@ export default function ChapterNav({ chapters, currentSlug }: Props) {
 	return (
 		<nav className="chapter-nav" aria-label="Chapter">
 			{prev ? (
-				<Link href={`/chapters/${prev.slug}`}>← {prev.title}</Link>
+				<Link
+					className="chapter-nav__link chapter-nav__link--prev"
+					href={`/chapters/${prev.slug}`}
+					aria-label={`Previous chapter: ${prev.title}`}
+				>
+					<span className="chapter-nav__label">
+						<ChevronIcon direction="left" size="sm" />
+						Previous
+					</span>
+					<span className="chapter-nav__title">{prev.title}</span>
+				</Link>
 			) : (
-				<span />
+				<span className="chapter-nav__spacer" aria-hidden="true" />
 			)}
 			{next ? (
-				<Link href={`/chapters/${next.slug}`}>{next.title} →</Link>
+				<Link
+					className="chapter-nav__link chapter-nav__link--next"
+					href={`/chapters/${next.slug}`}
+					aria-label={`Next chapter: ${next.title}`}
+				>
+					<span className="chapter-nav__label">
+						Next
+						<ChevronIcon direction="right" size="sm" />
+					</span>
+					<span className="chapter-nav__title">{next.title}</span>
+				</Link>
 			) : (
-				<span />
+				<span className="chapter-nav__spacer" aria-hidden="true" />
 			)}
 		</nav>
 	);

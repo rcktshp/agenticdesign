@@ -3,12 +3,13 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 127.0.0.1 -p 3010",
+    "dev": "WATCHPACK_POLLING=true next dev -H localhost -p 3010",
     "build": "next build",
     "start": "next start",
     "import-chapters": "node scripts/import-chapters.mjs"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "gray-matter": "^4.0.3",
     "next": "^15.1.6",
     "react": "^19.0.0",
